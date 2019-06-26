@@ -4,15 +4,15 @@
 program Solver
 !use mkl_spblas
 implicit none
-        real*8, allocatable :: nodesX(:), weightsX(:), nodesY(:), weightsY(:), nodesZ(:), &
+        real*8, allocatable :: nodesTheta(:), weightsTheta(:), nodesPhi(:), weightsPhi(:), nodesZ(:), &
                 weightsZ(:),holder(:),EigenVals(:), res(:), Hsparse(:)
-        real*8, allocatable :: Xx(:,:),dXx(:,:),Xy(:,:),dXy(:,:),Xz(:,:),dXz(:,:), &
-                weightsDMX(:,:),weightsDMY(:,:),weightsDMZ(:,:),EigenVecs(:,:), &
-                TmatX(:,:),TmatY(:,:),TmatZ(:,:),dXxtrim(:,:), dXytrim(:,:), dXztrim(:,:), &
+        real*8, allocatable :: XTheta(:,:),dXTheta(:,:),XPhi(:,:),dXPhi(:,:),Xz(:,:),dXz(:,:), &
+                weightsDMTheta(:,:),weightsDMPhi(:,:),weightsDMZ(:,:),EigenVecs(:,:), &
+                TmatTheta(:,:),TmatPhi(:,:),TmatZ(:,:),dXThetat(:,:), dXPhit(:,:), dXztrim(:,:), &
                 dfGLX(:,:),dfGLY(:,:),dfGLZ(:,:),dfGLXt(:,:),dfGLYt(:,:),dfGLZt(:,:)
-        real*8, allocatable :: indexOf(:,:,:)
-        real*8 :: n,w,valX,valXp,a,b,epsout,temp,mup,mdn,r0,d,mu,dm
-        integer :: feastparam(64),x,i,j,k,ip,jp,kp,m,sX,sY,sZ,sMax,numN0,ijk,ijkp,sXc,sYc,sZc, &
+        real*8, allocatable :: indexOf(:,:)
+        real*8 :: pi,n,w,valX,valXp,a,b,epsout,temp,mup,mdn,r0,d,mu,dm
+        integer :: feastparam(64),x,i,j,k,ip,jp,kp,m,sTheta,sPhi,sZ,sMax,numN0,ij,ijp,sThetac,sPhic,sZc, &
                 info,loop,rCount,row,m0,fsx,fsy,fsz,fsmax,fxmax
         integer, allocatable :: Hrow(:), Hcol(:)
         integer :: Tstart, Tend, rate
@@ -41,21 +41,20 @@ implicit none
         print *, "starting set",x
         call system_clock(Tstart)
 
-        read(x,*) sX
-        sY=sX
-        sZ=sX
-        sXc=sX-2
-        sYc=sY-2
-        sZc=sZ-2
-        sMax=sXc*sYc*sZc
+        read(x,*) sTheta
+        sPhi=sTheta
+        sThetac=sTheta-2
+        sPhic=sPhi-2
+        !sZc=sZ-2
+        sMax=sThetac*sPhic!*sZc
 
 
-        fsx=sx/2-1
-        fsy=sy/2-1
-        fsz=sz/2-1
-        fsMax=fsx*fsy*fsz
+        !fsx=sx/2-1
+        !fsy=sy/2-1
+        !fsz=sz/2-1
+        !fsMax=fsx*fsy*fsz
 
-        fxMax=sXc*sYc*fsz
+        !fxMax=sXc*sYc*fsz
         
         dm=5d0
         mup=1d0
@@ -63,121 +62,124 @@ implicit none
         r0=0.2d0
         d=0d0
         a=1/r0
+        pi=4.d0*DATAN(1.d0)
         !mu=(1d0/4d0)**(-1d0/3d0)
         !mu = 1d0
 
-        allocate(nodesX(sX),weightsX(sX),nodesY(sY),weightsY(sY),nodesZ(sZ),weightsZ(sZ),holder(sX), &
-                Xx(sX,sX),dXx(sX,sX),Xy(sY,sY),dXy(sY,sY),Xz(sZ,sZ),dXz(sZ,sZ), &
-                weightsDMX(sX,sX),weightsDMY(sY,sY),weightsDMZ(sZ/2,sZ/2),indexOf(sXc,sYc,fsz), &
-                TmatX(sXc,sXc), TmatY(sYc,sYc),TmatZ(fsz,fsz),dXxtrim(sXc,sX),dXytrim(sYc,sY),dXztrim(sZc,sZ), &
-                dfGLX(fsx,sx),dFGLY(fsy,sy),dfGLZ(fsz,sz),dfGLXt(fsx,sx/2),dfGLYt(fsy,sy/2),dfGLZt(fsz,sz/2))
+        allocate(nodesTheta(sTheta),weightsTheta(sTheta),nodesPhi(sPhi),weightsPhi(sPhi), &!nodesZ(sZ),weightsZ(sZ),
+                holder(sTheta), &
+                XTheta(sTheta,sTheta),dXTheta(sTheta,sTheta),XPhi(sPhi,sPhi),dXPhi(sPhi,sPhi), &!Xz(sZ,sZ),dXz(sZ,sZ), &
+                weightsDMTheta(sTheta,sTheta),weightsDMPhi(sPhi,sPhi),&!weightsDMZ(sZ/2,sZ/2),
+                indexOf(sThetac,sPhic), &
+                TmatTheta(sThetac,sThetac), TmatPhi(sPhic,sPhic),&!TmatZ(fsz,fsz),
+                dXThetat(sTHetac,sTheta),dXPhit(sPhic,sPhi))!dXztrim(sZc,sZ), &
+                !dfGLX(fsx,sx),dFGLY(fsy,sy),dfGLZ(fsz,sz),dfGLXt(fsx,sx/2),dfGLYt(fsy,sy/2),dfGLZt(fsz,sz/2))
 
         !read in data for each basis
-        do i=1,sX
+        do i=1,sTheta
                 read(x,*) n,w
-                nodesX(i)=n
-                weightsX(i)=w
+                nodesTheta(i)=n
+                weightsTheta(i)=w
         end do
-        nodesY=nodesX
-        weightsY=weightsX
-        nodesZ=nodesX
-        weightsZ=weightsX
+        nodesPhi=nodesTheta
+        weightsPhi=weightsTheta
+        !nodesZ=nodesTheta
+        !weightsZ=weightsTheta
         
         !rescale the basis functions to the desired range
-        call rescale(sX,0d0,dm,nodesX)
-        call rescale(sY,0d0,dm,nodesY)
-        call rescale(sZ,-dm,dm,nodesZ)
+        call rescale(sTheta,0d0,pi,nodesTheta)
+        call rescale(sPhi,0d0,pi/2d0,nodesPhi)
+        !call rescale(sZ,-dm,dm,nodesZ)
         !write(*,*) "rescaled"
         
         !build the DVR basis functions and their derivatives from the Gausian Lobatto nodes for each dimention
-        do i=1,sX
-                do j=1,sX
-                        call DVRFunctions(holder,nodesX,nodesX(j),i,sX,valX,weightsX)
-                        Xx(i,j)=valX
+        do i=1,sTheta
+                do j=1,sTheta
+                        call DVRFunctions(holder,nodesTheta,nodesTheta(j),i,sTheta,valX,weightsTheta)
+                        XTheta(i,j)=valX
 
-                        call DifferentiateChi(holder,nodesX,nodesX(j),i,sX,valXp,weightsX)
-                        dXx(i,j)=valXp
+                        call DifferentiateChi(holder,nodesTheta,nodesTheta(j),i,sTheta,valXp,weightsTheta)
+                        dXTheta(i,j)=valXp
                 end do
         end do
-        do i=1,sY
-                do j=1,sY
-                        call DVRFunctions(holder,nodesY,nodesY(j),i,sY,valX,weightsY)
-                        Xy(i,j)=valX
+        do i=1,sPhi
+                do j=1,sPhi
+                        call DVRFunctions(holder,nodesPhi,nodesPhi(j),i,sPhi,valX,weightsPhi)
+                        XPhi(i,j)=valX
 
-                        call DifferentiateChi(holder,nodesY,nodesY(j),i,sY,valXp,weightsY)
-                        dXy(i,j)=valXp
+                        call DifferentiateChi(holder,nodesPhi,nodesPhi(j),i,sPhi,valXp,weightsPhi)
+                        dXPhi(i,j)=valXp
                 end do
         end do
-        do i=1,sZ
-                do j=1,sZ
-                        call DVRFunctions(holder,nodesZ,nodesZ(j),i,sZ,valX,weightsZ)
-                        Xz(i,j)=valX
-
-                        call DifferentiateChi(holder,nodesZ,nodesZ(j),i,sZ,valXp,weightsZ)
-                        dXz(i,j)=valXp
-                end do
-        end do
+        !do i=1,sZ
+        !        do j=1,sZ
+        !                call DVRFunctions(holder,nodesZ,nodesZ(j),i,sZ,valX,weightsZ)
+        !                Xz(i,j)=valX
+!
+!                        call DifferentiateChi(holder,nodesZ,nodesZ(j),i,sZ,valXp,weightsZ)
+!                        dXz(i,j)=valXp
+!                end do
+!        end do
 
         !print *, "got Chi's"
 
         !derivatives must be resized due to end points being non-continuous (imposed to zero)
-        dXxtrim = dXx(2:sX-1,1:sX)
-        dXytrim = dXy(2:sY-1,1:sY)
-        dXztrim = dXz(2:sZ-1,1:sZ)
+        dXThetat = dXTheta(2:sTheta-1,1:sTheta)
+        dXPhit = dXPhi(2:sPhi-1,1:sPhi)
+        !dXztrim = dXz(2:sZ-1,1:sZ)
 
-        print *, size(dxxtrim)
 
         !call xTOf(sXc,fsx,XGLXtrim,fGLX)
         !call xTOf(sXc,fsx,dXXtrim,dfGLX)
         !call xTOf(sYc,fsy,dXYtrim,dfGLY)
-        call xTOf(sZc,fsz,dXZtrim,dfGLZ)
+        !call xTOf(sZc,fsz,dXZtrim,dfGLZ)
         
         !dfGLXt = dfGLX(1:fsx,1:sX/2)
         !dfGLYt = dfGLY(1:fsy,1:sY/2)
-        dfGLZt = dfGLZ(1:fsz,1:sZ/2)
+        !dfGLZt = dfGLZ(1:fsz,1:sZ/2)
 
         !make index array to help build Tsparse matrix
         row = 0
-        do i=1,sXc
-                do j=1,sYc
-                        do k=1,fsz
+        do i=1,sThetac
+                do j=1,sPhic
+                        !do k=1,fsz
                                 row=row+1
-                                indexOf(i,j,k)=row
-                        end do
+                                indexOf(i,j)=row
+                        !end do
                 end do
         end do
 
         !make T kenetic evergy matrix for each dimenstion
         !first make diagonal weight matrices
-        weightsDMX=0d0
-        weightsDMY=0d0
-        weightsDMZ=0d0
-        do i=1,sX
-                do ip=1,sX
+        weightsDMTheta=0d0
+        weightsDMPhi=0d0
+        !weightsDMZ=0d0
+        do i=1,sTheta
+                do ip=1,sTheta
                         if (i == ip) then
-                                weightsDMX(i,ip)=weightsX(i)
+                                weightsDMTheta(i,ip)=weightsTheta(i)
                         end if
                 end do
         end do
-        do i=1,sY
-                do ip=1,sY
+        do i=1,sPhi
+                do ip=1,sPhi
                         if (i == ip) then
-                                weightsDMY(i,ip)=weightsY(i)
+                                weightsDMPhi(i,ip)=weightsPhi(i)
                         end if
                 end do
         end do
-        do i=1,sZ/2
-                do ip=1,sZ/2
-                        if (i == ip) then
-                                weightsDMZ(i,ip)=2d0*weightsZ(i)
-                        end if
-                end do
-        end do
+        !do i=1,sZ/2
+        !        do ip=1,sZ/2
+        !                if (i == ip) then
+        !                        weightsDMZ(i,ip)=2d0*weightsZ(i)
+        !                end if
+        !        end do
+        !end do
         !now make the Tmat for each dimention 
         !- this formula comes from integration by parts, and the surface term goes to zero
-        TmatX = (0.5d0)*MATMUL(dXxtrim,MATMUL(weightsDMX,TRANSPOSE(dXXtrim)))
-        TmatY = (0.5d0)*MATMUL(dXytrim,MATMUL(weightsDMY,TRANSPOSE(dXYtrim)))
-        TmatZ = (0.5d0)*MATMUL(dfGLZt,MATMUL(weightsDMZ,TRANSPOSE(dfGLZt)))
+        TmatTheta = COS(MATMUL(dXThetat,MATMUL(weightsDMTheta,TRANSPOSE(dXThetat))))**(-1/2)
+        TmatPhi = MATMUL(dXPhit,MATMUL(weightsDMPhi,TRANSPOSE(dXPhit)))
+        !TmatZ = (0.5d0)*MATMUL(dfGLZt,MATMUL(weightsDMZ,TRANSPOSE(dfGLZt)))
         
         !now combine them using delta properties, and construct the Hsparse matrices explicitly, 
         !skipping creating T or V matrices
@@ -186,58 +188,59 @@ implicit none
         row=0
         rCount=1
         do m=1,2
-                do i=1,sXc
-                        do j=1,sYc
-                                do k=1,fsz
+                do i=1,sThetac
+                        do j=1,sPhic
+                                !do k=1,fsz
                                         row=row+1
-                                        do ip=1,sXc
-                                                do jp=1,sYc
-                                                        do kp=1,fsz
-                                                                ijk=indexOf(i,j,k)
-                                                                ijkp=indexOf(ip,jp,kp)
+                                        do ip=1,sThetac
+                                                do jp=1,sPhic
+                                                        !do kp=1,fsz
+                                                                ij=indexOf(i,j)
+                                                                ijp=indexOf(ip,jp)
                                                                 temp = 0d0
-                                                                if((j==jp).and.(k==kp)) then
-                                                                        temp=temp+TmatX(i,ip)
+                                                                if((j==jp)) then!.and.(k==kp)) then
+                                                                        temp=temp+TmatTheta(i,ip)
                                                                 end if
-                                                                if((i==ip).and.(k==kp)) then
-                                                                        temp=temp+TmatY(j,jp)
+                                                                if((i==ip)) then!.and.(k==kp)) then
+                                                                        temp=temp+TmatPhi(j,jp)
                                                                 end if
-                                                                if((j==jp).and.(i==ip)) then
-                                                                        temp=temp+TmatZ(k,kp)
-                                                                end if
-                                                                if((i==ip).and.(j==jp).and.(k==kp)) then
-                                                                        Call V3d(nodesX(i+1),nodesY(j+1),nodesZ(k+1),valX)
+                                                                !if((j==jp).and.(i==ip)) then
+                                                                !        temp=temp+TmatZ(k,kp)
+                                                                !end if
+                                                                if((i==ip).and.(j==jp)) then!.and.(k==kp)) then
+                                                                        !Call V3d(nodesTheta(i+1),nodesPhi(j+1),nodesZ(k+1),valX)
+                                                                        CALL Vtheta(nodesTheta(i+1),valX)
                                                                         temp=temp+valX
-                                                                        call V2bMorse(x12(nodesX(i+1),nodesY(j+1),nodesZ(k+1),mup,mdn),r0,d,a,valX)
-                                                                        temp=temp+valX
-                                                                        call V2bMorse(x13(nodesX(i+1),nodesY(j+1),nodesZ(k+1),mup,mdn),r0,d,a,valX)
-                                                                        temp=temp+valX
-                                                                        call V2bMorse(x14(nodesX(i+1),nodesY(j+1),nodesZ(k+1),mup,mdn),r0,d,a,valX)
-                                                                        temp=temp+valX
-                                                                        call V2bMorse(x23(nodesX(i+1),nodesY(j+1),nodesZ(k+1),mup,mdn),r0,d,a,valX)
-                                                                        temp=temp+valX
-                                                                        call V2bMorse(x24(nodesX(i+1),nodesY(j+1),nodesZ(k+1),mup,mdn),r0,d,a,valX)
-                                                                        temp=temp+valX
-                                                                        call V2bMorse(x34(nodesX(i+1),nodesY(j+1),nodesZ(k+1),mup,mdn),r0,d,a,valX)
-                                                                        temp=temp+valX
+                                                                        !call V2bMorse(x12(nodesTheta(i+1),nodesPhi(j+1),nodesZ(k+1),mup,mdn),r0,d,a,valX)
+                                                                        !temp=temp+valX
+                                                                        !call V2bMorse(x13(nodesTheta(i+1),nodesPhi(j+1),nodesZ(k+1),mup,mdn),r0,d,a,valX)
+                                                                        !temp=temp+valX
+                                                                        !call V2bMorse(x14(nodesTheta(i+1),nodesPhi(j+1),nodesZ(k+1),mup,mdn),r0,d,a,valX)
+                                                                        !temp=temp+valX
+                                                                        !call V2bMorse(x23(nodesTheta(i+1),nodesPhi(j+1),nodesZ(k+1),mup,mdn),r0,d,a,valX)
+                                                                        !temp=temp+valX
+                                                                        !call V2bMorse(x24(nodesTheta(i+1),nodesPhi(j+1),nodesZ(k+1),mup,mdn),r0,d,a,valX)
+                                                                        !temp=temp+valX
+                                                                        !call V2bMorse(x34(nodesTheta(i+1),nodesPhi(j+1),nodesZ(k+1),mup,mdn),r0,d,a,valX)
+                                                                        !temp=temp+valX
                                                                 end if
                                                                 if(temp /= 0) then
                                                                         numN0=numN0+1
                                                                         rCount=rCount+1
                                                                         if(m==2) then
                                                                                 Hsparse(numN0)=temp
-                                                                                Hcol(numN0)=ijkp
-                                                                                Hrow(ijk+1)=Hrow(ijk+1)+1
+                                                                                Hcol(numN0)=ijp
+                                                                                Hrow(ij+1)=Hrow(ij+1)+1
                                                                         end if
                                                                 end if
-                                                        end do
+                                                        !end do
                                                 end do
                                         end do
-                                end do
+                                !end do
                         end do
                 end do
                 if(m==1) then
-                        allocate(Hsparse(1:numN0),Hcol(1:numN0),Hrow(1:fxMax+2))
+                        allocate(Hsparse(1:numN0),Hcol(1:numN0),Hrow(1:sMax+2))
                         Hrow=0
                         Hrow(1)=1
                         numN0=0
@@ -246,40 +249,42 @@ implicit none
                 end if
         end do
         !sum up row counts for Hrow
-        do i=2,fxMax+1
+        do i=2,sMax+1
                 Hrow(i)=Hrow(i)+Hrow(i-1)
         end do
 
         !print *, "Got H"
-        print *, "If",size(Hsparse)," =",Hrow(fxMax+1)-1," =",size(Hcol)," then good"
+        print *, "If",size(Hsparse)," =",Hrow(sMax+1)-1," =",size(Hcol)," then good"
 
         
         !set up solver and call solver
-        if(x==1) then
-                m0=100
-        end if
-        if(x==2) then
-                m0=200
-        end if
-        if(x==3) then
-                m0=300
-        end if
-        if(x==4) then
-                m0=400
-        end if
-        if(x==5) then
-                m0=500
-        end if
-        if(x==6) then
-                m0=600
-        end if
-        allocate(EigenVals(m0),EigenVecs(fxMax,m0),res(m0))
+        !if(x==1) then
+        !        m0=100
+        !end if
+        !if(x==2) then
+        !        m0=200
+        !end if
+        !if(x==3) then
+        !        m0=300
+        !end if
+        !if(x==4) then
+        !        m0=400
+        !end if
+        !if(x==5) then
+        !        m0=500
+        !end if
+        !if(x==6) then
+        !        m0=600
+        !end if
+        m0=10
+
+        allocate(EigenVals(m0),EigenVecs(sMax,m0),res(m0))
         call feastinit(feastparam)
         feastparam(1)=1
         feastparam(2)=20
         !feastparam(4)=3
         feastparam(17)=0
-        call dfeast_scsrev('F',fxMax,Hsparse,Hrow,Hcol,feastparam,epsout,loop,-6d0*d,10d0,m0,EigenVals,EigenVecs,m,res,info)
+        call dfeast_scsrev('F',sMax,Hsparse,Hrow,Hcol,feastparam,epsout,loop,-6d0*d,10d0,m0,EigenVals,EigenVecs,m,res,info)
         
         print *, "info: ",info
         call system_clock(Tend,rate)
@@ -294,13 +299,13 @@ implicit none
         do i=1,20
                 print *, eigenvals(i)
         end do
-        deallocate(nodesX,weightsX,nodesY,weightsY,nodesZ,weightsZ,holder, &
-                Xx,dXx,Xy,dXy,Xz,dXz, &
-                weightsDMX,weightsDMY,weightsDMZ,indexOf, &
-                TmatX, TmatY,TmatZ,dXxtrim,dXytrim,dXztrim, &
-                dfGLX,dFGLY,dfGLZ,dfGLXt,dfGLYt,dfGLZt)
-        deallocate(Hsparse,Hcol,Hrow)
-        deallocate(EigenVals,EigenVecs,res)
+        !deallocate(nodesTheta,weightsTheta,nodesPhi,weightsPhi,nodesZ,weightsZ,holder, &
+        !        Xx,dXx,Xy,dXy,Xz,dXz, &
+        !        weightsDMX,weightsDMY,weightsDMZ,indexOf, &
+        !        TmatX, TmatY,TmatZ,dXxtrim,dXytrim,dXztrim, &
+        !        dfGLX,dFGLY,dfGLZ,dfGLXt,dfGLYt,dfGLZt)
+        !deallocate(Hsparse,Hcol,Hrow)
+        !deallocate(EigenVals,EigenVecs,res)
         
         !end do
 
@@ -417,6 +422,12 @@ implicit none
         res = (0.5d0)*(x**2+y**2+z**2)
 end subroutine V3D
 
+subroutine VTheta(theta,res)
+implicit none
+        real*8 theta,res
+
+        res=(1d0+SIN(theta)**2)/(4d0*SIN(theta)**2)
+end subroutine
 
 function x12(x,y,z,mup,mdn) result(res)
 implicit none
