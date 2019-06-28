@@ -36,7 +36,7 @@ implicit none
         !a=-5d0
         !b=5d0
         !do x=1,6
-        x=1
+        x=3
 
         print *, "starting set",x
         call system_clock(Tstart)
@@ -56,13 +56,14 @@ implicit none
 
         !fxMax=sXc*sYc*fsz
         
-        dm=5d0
-        mup=1d0
-        mdn=1d0
-        r0=0.2d0
-        d=0d0
-        a=1/r0
+        !dm=5d0
+        !mup=1d0
+        !mdn=1d0
+        !r0=0.2d0
+        !d=0d0
+        !a=1/r0
         pi=4.d0*DATAN(1.d0)
+        print *, pi
         !mu=(1d0/4d0)**(-1d0/3d0)
         !mu = 1d0
 
@@ -72,7 +73,7 @@ implicit none
                 weightsDMTheta(sTheta,sTheta),weightsDMPhi(sPhi,sPhi),&!weightsDMZ(sZ/2,sZ/2),
                 indexOf(sThetac,sPhic), &
                 TmatTheta(sThetac,sThetac), TmatPhi(sPhic,sPhic),&!TmatZ(fsz,fsz),
-                dXThetat(sTHetac,sTheta),dXPhit(sPhic,sPhi))!dXztrim(sZc,sZ), &
+                dXThetat(sThetac,sTheta),dXPhit(sPhic,sPhi))!dXztrim(sZc,sZ), &
                 !dfGLX(fsx,sx),dFGLY(fsy,sy),dfGLZ(fsz,sz),dfGLXt(fsx,sx/2),dfGLYt(fsy,sy/2),dfGLZt(fsz,sz/2))
 
         !read in data for each basis
@@ -83,6 +84,7 @@ implicit none
         end do
         nodesPhi=nodesTheta
         weightsPhi=weightsTheta
+        !weightsTheta = sin(weightsTheta)**(1d0/2d0)
         !nodesZ=nodesTheta
         !weightsZ=weightsTheta
         
@@ -177,8 +179,8 @@ implicit none
         !end do
         !now make the Tmat for each dimention 
         !- this formula comes from integration by parts, and the surface term goes to zero
-        TmatTheta = COS(MATMUL(dXThetat,MATMUL(weightsDMTheta,TRANSPOSE(dXThetat))))**(-1/2)
-        TmatPhi = MATMUL(dXPhit,MATMUL(weightsDMPhi,TRANSPOSE(dXPhit)))
+        TmatTheta = (-0.5d0)*MATMUL(dXThetat,MATMUL(weightsDMTheta,TRANSPOSE(dXThetat)))
+        TmatPhi = (-0.5d0)*MATMUL(dXPhit,MATMUL(weightsDMPhi,TRANSPOSE(dXPhit)))
         !TmatZ = (0.5d0)*MATMUL(dfGLZt,MATMUL(weightsDMZ,TRANSPOSE(dfGLZt)))
         
         !now combine them using delta properties, and construct the Hsparse matrices explicitly, 
@@ -202,7 +204,7 @@ implicit none
                                                                         temp=temp+TmatTheta(i,ip)
                                                                 end if
                                                                 if((i==ip)) then!.and.(k==kp)) then
-                                                                        temp=temp+TmatPhi(j,jp)
+                                                                        temp=temp+TmatPhi(j,jp)*(1d0/sin(nodesTheta(i+1))**(2d0))
                                                                 end if
                                                                 !if((j==jp).and.(i==ip)) then
                                                                 !        temp=temp+TmatZ(k,kp)
@@ -276,7 +278,7 @@ implicit none
         !if(x==6) then
         !        m0=600
         !end if
-        m0=10
+        m0=50
 
         allocate(EigenVals(m0),EigenVecs(sMax,m0),res(m0))
         call feastinit(feastparam)
@@ -284,17 +286,17 @@ implicit none
         feastparam(2)=20
         !feastparam(4)=3
         feastparam(17)=0
-        call dfeast_scsrev('F',sMax,Hsparse,Hrow,Hcol,feastparam,epsout,loop,-6d0*d,10d0,m0,EigenVals,EigenVecs,m,res,info)
+        call dfeast_scsrev('F',sMax,Hsparse,Hrow,Hcol,feastparam,epsout,loop,-10d0,20d0,m0,EigenVals,EigenVecs,m,res,info)
         
         print *, "info: ",info
         call system_clock(Tend,rate)
-        write(100,*) x,(Tend-Tstart)/rate
-        write(100,*) "" 
+        !write(100,*) x,(Tend-Tstart)/rate
+        !write(100,*) "" 
         
-        write(100,*) (EigenVals(1)-3.5d0)/3.5d0
-        write(100,*) (EigenVals(2)-5.5d0)/5.5d0
-        write(100,*) (EigenVals(5)-7.5d0)/7.5d0
-        write(100,*) (EigenVals(11)-9.5d0)/8.5d0
+        !write(100,*) (EigenVals(1)-3.5d0)/3.5d0
+        !write(100,*) (EigenVals(2)-5.5d0)/5.5d0
+        !write(100,*) (EigenVals(5)-7.5d0)/7.5d0
+        !write(100,*) (EigenVals(11)-9.5d0)/8.5d0
 
         do i=1,20
                 print *, eigenvals(i)
